@@ -43,6 +43,10 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     vendor/slim/prebuilt/common/etc/init.local.rc:root/init.slim.rc
 
+# Brevent
+PRODUCT_COPY_FILES += \
+    vendor/slim/prebuilt/Brevent/Brevent.apk:system/app/Brevent/Brevent.apk
+
 # SELinux filesystem labels
 PRODUCT_COPY_FILES += \
     vendor/slim/prebuilt/common/etc/init.d/50selinuxrelabel:system/etc/init.d/50selinuxrelabel
