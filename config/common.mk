@@ -91,6 +91,10 @@ PRODUCT_PACKAGES += \
     org.cyanogenmod.hardware \
     org.cyanogenmod.hardware.xml
 
+# Masquerade app for Substratum
+PRODUCT_PACKAGES += \
+    masquerade
+
 # Extra Optional packages
 PRODUCT_PACKAGES += \
     SlimBootAnimation \
