@@ -91,6 +91,15 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     masquerade
 
+# ViPER4Android
+PRODUCT_PACKAGES += \
+    ViPER4Android
+
+# TODO: Hack in source code, instead of using this.
+PRODUCT_COPY_FILES += \
+    vendor/slim/proprietary/ViPER4Android/soundfx/armeabi/libeffectproxy.so:system/lib/soundfx/libeffectproxy.so \
+    vendor/slim/proprietary/ViPER4Android/soundfx/arm64/libeffectproxy.so:system/lib64/soundfx/libeffectproxy.so
+
 # Extra Optional packages
 PRODUCT_PACKAGES += \
     SlimBootAnimation \
