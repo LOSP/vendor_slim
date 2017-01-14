@@ -11,7 +11,7 @@ Additional SlimRoms functions:
 - slimgerrit:      A Git wrapper that fetches/pushes patch from/to SLIM Gerrit Review.
 - slimrebase:      Rebase a Gerrit change and push it again.
 - slimremote:      Add a git remote for SLIM github repository.
-- cmremote:        Add git remote pointing to the cm github repository.
+- losremote:       Add git remote pointing to the LineageOS github repository.
 - aospremote:      Add git remote for matching AOSP repository.
 - cafremote:       Add git remote for matching CodeAurora repository.
 - mka:             Builds using SCHED_BATCH on all processors.
@@ -114,7 +114,7 @@ function slimremote()
     echo "Remote 'slim' created"
 }
 
-function cmremote()
+function losremote()
 {
     local proj pfx project
 
@@ -133,46 +133,41 @@ function cmremote()
     project=${project%-caf*}
     fi
 
-    git remote add cm "git@github.com:CyanogenMod/$pfx$project"
-    echo "Remote 'cm' created"
+    git remote add los "git@github.com:LineageOS/$pfx$project"
+    echo "Remote 'los' created"
 }
 
 function aospremote()
 {
-    local pfx project
-
-    if ! git rev-parse &> /dev/null
+    if ! git rev-parse --git-dir &> /dev/null
     then
-        echo "Not in a git directory. Please run this from an Android repository you wish to set up."
-        return
+        echo ".git directory not found. Please run this from the root directory of the Android repository you wish to set up."
+        return 1
     fi
     git remote rm aosp 2> /dev/null
-
-    project="$(pwd -P | sed "s#$ANDROID_BUILD_TOP/##g")"
-    if [[ "$project" != device* ]]
+    PROJECT=$(pwd -P | sed -e "s#$ANDROID_BUILD_TOP\/##; s#-caf.*##; s#\/default##")
+    if (echo $PROJECT | grep -qv "^device")
     then
-        pfx="platform/"
+        PFX="platform/"
     fi
-    git remote add aosp "https://android.googlesource.com/$pfx$project"
+    git remote add aosp https://android.googlesource.com/$PFX$PROJECT
     echo "Remote 'aosp' created"
 }
 
 function cafremote()
 {
-    local pfx project
-
-    if ! git rev-parse &> /dev/null
+    if ! git rev-parse --git-dir &> /dev/null
     then
-        echo "Not in a git directory. Please run this from an Android repository you wish to set up."
+        echo ".git directory not found. Please run this from the root directory of the Android repository you wish to set up."
+        return 1
     fi
     git remote rm caf 2> /dev/null
-
-    project="$(pwd -P | sed "s#$ANDROID_BUILD_TOP/##g")"
-    if [[ "$project" != device* ]]
+    PROJECT=$(pwd -P | sed -e "s#$ANDROID_BUILD_TOP\/##; s#-caf.*##; s#\/default##")
+    if (echo $PROJECT | grep -qv "^device")
     then
-        pfx="platform/"
+        PFX="platform/"
     fi
-    git remote add caf "git://codeaurora.org/$pfx$project"
+    git remote add caf git://codeaurora.org/$PFX$PROJECT
     echo "Remote 'caf' created"
 }
 
@@ -900,7 +895,7 @@ function repodiff() {
 function _adb_connected {
     {
         if [[ "$(adb get-state)" == device &&
-              "$(adb shell test -e /sbin/recovery; echo $?)" == 1 ]]
+              "$(adb shell test -e /sbin/recovery; echo $?)" != 0 ]]
         then
             return 0
         fi
@@ -927,7 +922,8 @@ function dopush()
     if (adb shell getprop ro.slim.device | grep -q "$SLIM_BUILD") || [ "$FORCE_PUSH" = "true" ];
     then
     # retrieve IP and PORT info if we're using a TCP connection
-    TCPIPPORT=$(adb devices | egrep '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+[^0-9]+' \
+    TCPIPPORT=$(adb devices \
+        | egrep '^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]):[0-9]+[^0-9]+' \
         | head -1 | awk '{print $1}')
     adb root &> /dev/null
     sleep 0.3
@@ -941,16 +937,30 @@ function dopush()
     sleep 0.3
     adb remount &> /dev/null
 
-    $func $*
-    if [ $? -ne 0 ]; then
-        return $?
+    mkdir -p $OUT
+    ($func $*|tee $OUT/.log;return ${PIPESTATUS[0]})
+    ret=$?;
+    if [ $ret -ne 0 ]; then
+        rm -f $OUT/.log;return $ret
     fi
 
-    NINJA_DIR=$(pwd -P | sed "s#$ANDROID_BUILD_TOP\/##" | sed "s/\//_/g")
-    NINJA_MAKEFILE=$(gettop)/out/build-${TARGET_PRODUCT}-mmm-${NINJA_DIR}_Android.mk.ninja
-
     # Install: <file>
-    LOC="$(grep '^ description = Install:' $NINJA_MAKEFILE | cut -d ':' -f 2)"
+    if [ `uname` = "Linux" ]; then
+        LOC="$(cat $OUT/.log | sed -r -e 's/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' -e 's/^\[ {0,2}[0-9]{1,3}% [0-9]{1,6}\/[0-9]{1,6}\] +//' \
+            | grep '^Install: ' | cut -d ':' -f 2)"
+    else
+        LOC="$(cat $OUT/.log | sed -E "s/"$'\E'"\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g" -E "s/^\[ {0,2}[0-9]{1,3}% [0-9]{1,6}\/[0-9]{1,6}\] +//" \
+            | grep '^Install: ' | cut -d ':' -f 2)"
+    fi
+
+    # Copy: <file>
+    if [ `uname` = "Linux" ]; then
+        LOC="$LOC $(cat $OUT/.log | sed -r -e 's/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g' -e 's/^\[ {0,2}[0-9]{1,3}% [0-9]{1,6}\/[0-9]{1,6}\] +//' \
+            | grep '^Copy: ' | cut -d ':' -f 2)"
+    else
+        LOC="$LOC $(cat $OUT/.log | sed -E "s/"$'\E'"\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g" -E 's/^\[ {0,2}[0-9]{1,3}% [0-9]{1,6}\/[0-9]{1,6}\] +//' \
+            | grep '^Copy: ' | cut -d ':' -f 2)"
+    fi
 
     # If any files are going to /data, push an octal file permissions reader to device
     if [ -n "$(echo $LOC | egrep '(^|\s)/data')" ]; then
@@ -1069,4 +1079,9 @@ if [ -d $(gettop)/prebuilts/snapdragon-llvm/toolchains ]; then
             export SDCLANG_LTO_DEFS=$(gettop)/device/qcom/common/sdllvm-lto-defs.mk
             ;;
     esac
+fi
+
+# Android specific JACK args
+if [ -n "$JACK_SERVER_VM_ARGUMENTS" ] && [ -z "$ANDROID_JACK_VM_ARGS" ]; then
+    export ANDROID_JACK_VM_ARGS=$JACK_SERVER_VM_ARGUMENTS
 fi
