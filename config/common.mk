@@ -9,13 +9,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
 endif
 
 PRODUCT_PROPERTY_OVERRIDES += \
-    keyguard.no_require_sim=true \
-    ro.url.legal=http://www.google.com/intl/%s/mobile/android/basic/phone-legal.html \
-    ro.url.legal.android_privacy=http://www.google.com/intl/%s/mobile/android/basic/privacy.html \
-    ro.com.android.wifi-watchlist=GoogleGuest \
-    ro.setupwizard.enterprise_mode=1 \
-    ro.com.android.dateformat=MM-dd-yyyy \
-    ro.com.android.dataroaming=false
+    keyguard.no_require_sim=true
 
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.build.selinux=1
@@ -166,7 +160,7 @@ PRODUCT_PACKAGE_OVERLAYS += \
 # Slim version.
 PRODUCT_VERSION_MAJOR = 7.1.1
 PRODUCT_VERSION_MINOR = build
-PRODUCT_VERSION_MAINTENANCE = 0.7
+PRODUCT_VERSION_MAINTENANCE = 0.8
 ifdef SLIM_BUILD_EXTRA
     SLIM_POSTFIX := -$(SLIM_BUILD_EXTRA)
 endif
