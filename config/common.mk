@@ -89,6 +89,10 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     ViPER4Android
 
+# PrivBrevent
+PRODUCT_PACKAGES += \
+    PrivBrevent
+
 # TODO: Hack in source code, instead of using this.
 PRODUCT_COPY_FILES += \
     vendor/slim/proprietary/ViPER4Android/soundfx/armeabi/libeffectproxy.so:system/lib/soundfx/libeffectproxy.so \
